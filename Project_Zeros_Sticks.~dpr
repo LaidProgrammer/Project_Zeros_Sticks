@@ -1,0 +1,15 @@
+program Project_Zeros_Sticks;
+
+uses
+  Forms,
+  UMain in 'UMain.pas' {Form1},
+  UGame in 'UGame.pas' {Form2},
+  UOptions in 'UOptions.pas' {Form3};
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.CreateForm(TForm1, Form1);
+  Application.Run;
+end.
