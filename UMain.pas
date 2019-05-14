@@ -33,6 +33,7 @@ type
     Edit3: TEdit;
     Panel2: TPanel;
     Panel3: TPanel;
+    Button6: TButton;
     procedure FormCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
@@ -53,11 +54,20 @@ type
     procedure Options_Confirm_ButtonClick(Sender: TObject);
     procedure FormResize(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure Button6Click(Sender: TObject);
   private
     { Private declarations }
   public
+    procedure ModSleep(ATime : Integer);
     { Public declarations }
   end;
+  TMyThread = class(TThread)
+    private
+    { Private declarations }
+  protected
+    procedure Execute; override;
+  end;
+
 
 var
   Form1 : TForm1;
@@ -68,8 +78,15 @@ var
   delay, wins, win_x, win_o, turn, awnser : integer;
   delay_float, Cx, Cy : real;
   Pole : Pole_Array;
+  w, c : boolean;
+  MyThread : TMyThread;
 
 implementation
+
+uses Math;
+
+label
+  l;
 
 {$R *.dfm}
 
@@ -169,6 +186,7 @@ function TForm1.Check_Win;
 var
   i, j : integer;
   fives : array [0..27,0..3] of integer;
+  //coor : array [0..55,0..3] of integer;
 begin
   for i := 0 to 4 do
   begin
@@ -177,6 +195,14 @@ begin
       fives[i][j] := Pole[i][j];
       fives[i+5][j] := Pole[i][j+1];
     end;
+    {coor[2*i][0] := i;
+    coor[2*i][1] := 0;
+    coor[2*i][2] := i;
+    coor[2*i][3] := 3;
+    coor[2*i+1][0] := i;
+    coor[2*i+1][1] := 1;
+    coor[2*i+1][2] := i;
+    coor[2*i+1][3] := 4;   }
   end;
   for i := 0 to 4 do
   begin
@@ -185,6 +211,14 @@ begin
       fives[i+10][j] := pole[j][i];
       fives[i+15][j] := pole[j+1][i];
     end;
+    {coor[2*i+10][0] := i;
+    coor[2*i+10][1] := 0;
+    coor[2*i+10][2] := i;
+    coor[2*i+10][3] := 3;
+    coor[2*i+11][0] := i;
+    coor[2*i+11][1] := 1;
+    coor[2*i+11][2] := i;
+    coor[2*i+11][3] := 4; }
   end;
   for i := 0 to 3 do
   begin
@@ -243,6 +277,7 @@ begin
   size_x := round(GamePanel.Width/5);
   size_y := round(GamePanel.Height/5);
   GamePanel.Canvas.Pen.Color := clBlack;
+  GamePanel.Canvas.Pen.Width := 3;
   for i := 1 to 4 do
   begin
     GamePanel.Canvas.MoveTo(i*size_x,0);
@@ -298,6 +333,7 @@ begin
   end;
   Self.Enabled := True;
   Self.Score_Panel.Caption:=inttostr(win_x) + ' : ' + inttostr(win_o);
+  Self.Button6.Enabled := False;
 end;
 
 procedure TForm1.End_Round;
@@ -392,7 +428,7 @@ end;
 procedure TForm1.Step(Sender: TObject);
 var
   str_x, str_y : string;
-  x, y : integer;
+  x, y, i, k : integer;
   Rlst: LongBool;
   StartUpInfo: TStartUpInfo;
   ProcessInfo: TProcessInformation;
@@ -412,11 +448,15 @@ begin
         wShowWindow := SW_HIDE;
       end;
       t := Time;
-      Rlst := CreateProcess(PChar(Player_1_path), nil, nil, nil, false, REALTIME_PRIORITY_CLASS, nil, nil, StartUpInfo, ProcessInfo);
+      Rlst := CreateProcess(PChar(Player_1_path), nil, nil, nil, false, NORMAL_PRIORITY_CLASS, nil, nil, StartUpInfo, ProcessInfo);
       if Rlst then
       with ProcessInfo do begin
         WaitForInputIdle(hProcess, INFINITE);
-        sleep(delay-1);
+        MyThread := TMyThread.Create(False);
+        while MyThread.Terminated<>True do
+        begin
+          x:=x;
+        end;
         TerminateProcess(hProcess,NO_ERROR);
         GetExitCodeProcess(ProcessInfo.hProcess, ExitCode);
         CloseHandle(hThread);
@@ -498,11 +538,15 @@ begin
         dwFlags := STARTF_USESHOWWINDOW or STARTF_FORCEONFEEDBACK;
         wShowWindow := SW_HIDE;
       end;
-      Rlst := CreateProcess(PChar(Player_2_path), nil, nil, nil, false, REALTIME_PRIORITY_CLASS, nil, nil, StartUpInfo, ProcessInfo);
+      Rlst := CreateProcess(PChar(Player_2_path), nil, nil, nil, false, NORMAL_PRIORITY_CLASS, nil, nil, StartUpInfo, ProcessInfo);
       if Rlst then
       with ProcessInfo do begin
         WaitForInputIdle(hProcess, INFINITE);
-        sleep(delay-1);
+        MyThread := TMyThread.Create(False);
+        while MyThread.Terminated<>True do
+        begin
+          x:=x;
+        end;
         TerminateProcess(hProcess,NO_ERROR);
         GetExitCodeProcess(ProcessInfo.hProcess, ExitCode);
         CloseHandle(hThread);
@@ -583,16 +627,18 @@ begin
     Player_2_path := Trim(Player_2_path);
     Player_log_1_path := Trim(Player_log_1_path);
     Player_log_2_path := Trim(Player_log_2_path);
+    Self.Button6.Enabled := True;
+    Self.Button6.Caption := 'œ¿”«¿';
+    c := False;
     MyTimer:=TTimer.Create(Self);
     MyTimer.Interval := 1;
     MyTimer.OnTimer := Step;
     MyTimer.Enabled := True;
     try
-      AssignFile(log,'history_of_this_game.txt');
+      AssignFile(log,GetCurrentDir + '/history_of_this_game.txt');
       Rewrite(log);
     except
     end;
-    Self.Enabled := False;
   end;
 end;
 
@@ -625,10 +671,10 @@ begin
     Self.Edit1.Text := '0,7';
     delay := 700;
   end;
-  if (delay < 2) then
+  if (delay < 100) then
   begin
-    delay := 2;
-    Self.Edit1.Text := '0,002';
+    delay := 100;
+    Self.Edit1.Text := '0,1';
   end;
   if (delay > 100000) then
   begin
@@ -741,6 +787,11 @@ begin
   Self.Label3.Width := Round(Self.ClientWidth*0.24);
   Self.Label3.Height := Round(Self.ClientHeight*0.05);
 
+  Self.Button6.Left := Self.Button5.Left;
+  Self.Button6.Top := Round(Self.ClientHeight*0.9);
+  Self.Button6.Width := Self.Button5.Width;
+  Self.Button6.Height := Self.Button5.Height;
+
   GamePanel.SetBounds(Self.Left_Panel.ClientWidth,
                       Self.Score_Panel.ClientHeight,
                       Self.ClientWidth-2*Self.Right_Panel.ClientWidth,
@@ -751,9 +802,51 @@ procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   try
     CloseFile(history);
+    CloseFile(log);
   except
   end;
-  //CloseFile(log);
+end;
+
+procedure TForm1.ModSleep(ATime : Integer);
+var
+    start, stop: Longint;
+begin
+    start := GetTickCount;
+    repeat
+        stop := GetTickCount;
+        Application.HandleMessage;
+    until (stop - start) >= ATime;
+end;
+
+{ TMyThread }
+
+procedure TMyThread.Execute;
+begin
+  inherited;
+  sleep(delay-1);
+  Self.Terminate;
+end;
+
+procedure TForm1.Button6Click(Sender: TObject);
+begin
+  if c = False then
+  begin
+    MyTimer.Enabled := False;
+    c := True;
+    Self.Button6.Caption := 'œ–ŒƒŒÀ∆»“‹';
+  end
+  else
+  begin
+    MyTimer.Enabled := True;
+    c := False;
+    Self.Button6.Caption := 'œ¿”«¿';
+  end;
 end;
 
 end.
+
+
+
+
+
+
